@@ -1,0 +1,124 @@
+// gyro=1, color=4, touch=2
+// wheels are connected to motor A and D respectively, auger is connected to motor B
+// gyro is set in angle mode, color sensor is set in reflected mode
+void initialdrive(){ //drives until blue line on rink.
+	resetGyro(S1);
+	motor[motorA]=motor[motorD]=-20;
+while (SensorValue[S4]>10){} // benchmark for blue according to port view
+motor[motorA]=motor[motorD]=0;
+}
+
+void driveintocorner() {// drives along the perimeter and into 3 wall corners.
+	int j=0;
+	motor[motorA]=motor[motorD]=30;
+	while (SensorValue[S2]==0){}
+	motor[motorA]=motor[motorD]=0;
+	time1[T1]=0;
+	while (time1[T1]<1000){};
+	while (SensorValue[S1]>-270){ // robot will 270 degress by the end of the 3 walls
+		motor[motorA]=motor[motorD]=-10;
+		wait1Msec(1000);
+		motor[motorA]=-5; motor[motorD]=10;
+		while(SensorValue[S1]>-10*(j+1)){};// makes 10 degree ambient turns
+		motor[motorA]=30; motor[motorD]=30;
+		while (SensorValue[S2]==0){};
+		motor[motorA]=motor[motorD]=0;
+		j++;
+	}
+	motor[motorA]=motor[motorD]=-10;
+	wait1Msec(2000);
+}
+
+void driveintocornerfinal(){ //drives along one side and into one corner.
+	int j=0;
+	while (SensorValue[S1]>-360){/* since gyro won’t be reset, the last turn will ensure the robot moves in a circle, in other words, 360 degrees*/
+			motor[motorA]=motor[motorD]=-10;
+			wait1Msec(1000);
+			motor[motorA]=-5; motor[motorD]=10;
+			while(SensorValue[S1]>-270-10*(j+1)){};/* makes 10 degree incremental turns*/
+			motor[motorA]=30; motor[motorD]=30;
+			while (SensorValue[S2]==0){};
+			motor[motorA]=motor[motorD]=0;
+			j++;
+}
+
+
+void turn(float degree){ // turns a predetermined angle set by ‘degree’ input.
+	resetGyro(S1);
+	if (degree>0){
+		motor[motorA]=-5; motor[motorD]=5;
+		while (SensorValue[S1]<degree ){}
+	}
+	if (degree<0){
+		motor[motorA]=1; motor[motorD]=5;
+		while (SensorValue[S1]>degree+2 || SensorValue[S1]>degree-2){}
+ }
+	motor[motorA]=motor[motorD]=0;
+}
+
+float distance(float square){ // calculated encoder value based on square input with a half a square extension.
+	float distance_calc=0;
+	distance_calc= (square+0.5)*4/(2*PI*1.08)*360;
+	return distance_calc;
+}
+
+void drive(float distance){ // drives straight according to value calculated in above function.
+	nMotorEncoder[motorA]=0;
+	motor[motorA]=motor[motorD]=20;
+	while (nMotorEncoder[motorA]<distance){}
+	motor[motorA]=motor[motorD]=0;
+}
+
+void turnleft(){ // turns left, goes to adjacent wall and positions itself accordingly.
+	resetGyro(S1);
+	motor[motorA]=-5; motor[motorD]=5;
+	while (SensorValue[S1]>-55){} // turns left by 55 degrees
+	motor[motorA]=motor[motorD]=0;
+	motor[motorA]=motor[motorD]=10;
+	while (SensorValue[S2]==0){} // drives straight until touch sensor is activated
+	motor[motorA]=motor[motorD]=0;
+}
+
+void finaldrive(){ // turns along the corner for 2 seconds and then ends the program. 
+	motor[motorA]=15; motor[motorD]=30;
+	time1[T1]=0;
+	while (time1[T1]<2000){};
+	motor[motorA]=motor[motorD]=0;
+}
+
+
+task main()
+{
+	while (!getButtonPress(buttonAny)){};
+	while (getButtonPress(buttonAny)){};//Button pressed and released to start
+	SensorType[S1]= SensorEV3_Gyro;
+	SensorType[S4]= SensorEV3_Color;
+	SensorType[S3]= sensorEV3_Touch;
+	motor[motorB]=-10; //Auger speed setup
+	float distance_calc=0;
+	SensorMode[S4]= modeEV3Color_Reflected;
+	SensorMode[S1]= modeEV3Gyro_Angle;
+	initialdrive();
+	resetGyro(S1);
+	driveintocorner();
+	driveintocornerfinal();
+	resetGyro(S1);
+initialdrive();
+turn(-83);// to account for gyro offset. 
+distance_calc= distance(0.5);
+drive(distance_calc);
+resetGyro(S1);
+turn(-83);// to account for gyro offset
+distance_calc= distance(2);
+drive(distance_calc);
+resetGyro(S1);
+turn(-83);
+turn(-83);
+distance_calc=distance(1);
+drive(distance_calc);
+resetGyro(S1);
+turn(-270);
+resetGyro(S1);
+turnleft();
+finaldrive();
+}
